@@ -11,7 +11,7 @@ pub(crate) use self::limit::SizeLimit;
 pub(crate) use self::trailing::TrailingBytes;
 
 pub use self::endian::{BigEndian, LittleEndian, NativeEndian};
-pub use self::int::{FixintEncoding, VarintEncoding};
+pub use self::int::{FixintEncoding, SmallFixintEncoding, VarintEncoding};
 pub use self::legacy::*;
 pub use self::limit::{Bounded, Infinite};
 pub use self::trailing::{AllowTrailing, RejectTrailing};
@@ -116,6 +116,11 @@ pub trait Options: InternalOptions + Sized {
 
     /// Sets the length encoding to be fixed
     fn with_fixint_encoding(self) -> WithOtherIntEncoding<Self, FixintEncoding> {
+        WithOtherIntEncoding::new(self)
+    }
+
+    /// Sets the length encoding to be small fixed
+    fn with_small_fixint_encoding(self) -> WithOtherIntEncoding<Self, SmallFixintEncoding> {
         WithOtherIntEncoding::new(self)
     }
 

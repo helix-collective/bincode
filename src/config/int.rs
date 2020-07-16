@@ -124,6 +124,14 @@ pub trait IntEncoding {
 #[derive(Copy, Clone)]
 pub struct FixintEncoding;
 
+/// Small fixed-size integer encoding.
+///
+/// * Fixed size integers are encoded directly
+/// * Enum discriminants are encoded as u32
+/// * Lengths and usize are encoded as u32
+#[derive(Copy, Clone)]
+pub struct SmallFixintEncoding;
+
 /// Variable-size integer encoding (excepting [ui]8).
 ///
 /// Encoding an unsigned integer v (of any type excepting u8) works as follows:
@@ -457,6 +465,155 @@ impl IntEncoding for FixintEncoding {
     }
 }
 
+impl IntEncoding for SmallFixintEncoding {
+
+    fn len_size(len: usize) -> u64 {
+        Self::u32_size(len as u32)
+    }
+
+    fn serialize_len<W: Write, O: Options>(
+        ser: &mut ::ser::Serializer<W, O>,
+        len: usize,
+    ) -> Result<()> {
+        Self::serialize_u32(ser, len as u32)
+    }
+
+    fn deserialize_len<'de, R: BincodeRead<'de>, O: Options>(
+        de: &mut ::de::Deserializer<R, O>,
+    ) -> Result<usize> {
+        Self::deserialize_u32(de).and_then(cast_u32_to_usize)
+    }
+
+
+    #[inline(always)]
+    fn u16_size(_: u16) -> u64 {
+        size_of::<u16>() as u64
+    }
+    #[inline(always)]
+    fn u32_size(_: u32) -> u64 {
+        size_of::<u32>() as u64
+    }
+    #[inline(always)]
+    fn u64_size(_: u64) -> u64 {
+        size_of::<u64>() as u64
+    }
+
+    #[inline(always)]
+    fn i16_size(_: i16) -> u64 {
+        size_of::<i16>() as u64
+    }
+    #[inline(always)]
+    fn i32_size(_: i32) -> u64 {
+        size_of::<i32>() as u64
+    }
+    #[inline(always)]
+    fn i64_size(_: i64) -> u64 {
+        size_of::<i64>() as u64
+    }
+
+    #[inline(always)]
+    fn serialize_u16<W: Write, O: Options>(ser: &mut ::Serializer<W, O>, val: u16) -> Result<()> {
+        ser.serialize_literal_u16(val)
+    }
+    #[inline(always)]
+    fn serialize_u32<W: Write, O: Options>(ser: &mut ::Serializer<W, O>, val: u32) -> Result<()> {
+        ser.serialize_literal_u32(val)
+    }
+    #[inline(always)]
+    fn serialize_u64<W: Write, O: Options>(ser: &mut ::Serializer<W, O>, val: u64) -> Result<()> {
+        ser.serialize_literal_u64(val)
+    }
+
+    #[inline(always)]
+    fn serialize_i16<W: Write, O: Options>(ser: &mut ::Serializer<W, O>, val: i16) -> Result<()> {
+        ser.serialize_literal_u16(val as u16)
+    }
+    #[inline(always)]
+    fn serialize_i32<W: Write, O: Options>(ser: &mut ::Serializer<W, O>, val: i32) -> Result<()> {
+        ser.serialize_literal_u32(val as u32)
+    }
+    #[inline(always)]
+    fn serialize_i64<W: Write, O: Options>(ser: &mut ::Serializer<W, O>, val: i64) -> Result<()> {
+        ser.serialize_literal_u64(val as u64)
+    }
+
+    #[inline(always)]
+    fn deserialize_u16<'de, R: BincodeRead<'de>, O: Options>(
+        de: &mut ::Deserializer<R, O>,
+    ) -> Result<u16> {
+        de.deserialize_literal_u16()
+    }
+    #[inline(always)]
+    fn deserialize_u32<'de, R: BincodeRead<'de>, O: Options>(
+        de: &mut ::Deserializer<R, O>,
+    ) -> Result<u32> {
+        de.deserialize_literal_u32()
+    }
+    #[inline(always)]
+    fn deserialize_u64<'de, R: BincodeRead<'de>, O: Options>(
+        de: &mut ::Deserializer<R, O>,
+    ) -> Result<u64> {
+        de.deserialize_literal_u64()
+    }
+
+    #[inline(always)]
+    fn deserialize_i16<'de, R: BincodeRead<'de>, O: Options>(
+        de: &mut ::Deserializer<R, O>,
+    ) -> Result<i16> {
+        Ok(de.deserialize_literal_u16()? as i16)
+    }
+    #[inline(always)]
+    fn deserialize_i32<'de, R: BincodeRead<'de>, O: Options>(
+        de: &mut ::Deserializer<R, O>,
+    ) -> Result<i32> {
+        Ok(de.deserialize_literal_u32()? as i32)
+    }
+    #[inline(always)]
+    fn deserialize_i64<'de, R: BincodeRead<'de>, O: Options>(
+        de: &mut ::Deserializer<R, O>,
+    ) -> Result<i64> {
+        Ok(de.deserialize_literal_u64()? as i64)
+    }
+
+    serde_if_integer128! {
+        #[inline(always)]
+        fn u128_size(_: u128) -> u64{
+            size_of::<u128>() as u64
+        }
+        #[inline(always)]
+        fn i128_size(_: i128) -> u64{
+            size_of::<i128>() as u64
+        }
+
+        #[inline(always)]
+        fn serialize_u128<W: Write, O: Options>(
+            ser: &mut ::Serializer<W, O>,
+            val: u128,
+        ) -> Result<()> {
+            ser.serialize_literal_u128(val)
+        }
+        #[inline(always)]
+        fn serialize_i128<W: Write, O: Options>(
+            ser: &mut ::Serializer<W, O>,
+            val: i128,
+        ) -> Result<()> {
+            ser.serialize_literal_u128(val as u128)
+        }
+        #[inline(always)]
+        fn deserialize_u128<'de, R: BincodeRead<'de>, O: Options>(
+            de: &mut ::Deserializer<R, O>,
+        ) -> Result<u128> {
+            de.deserialize_literal_u128()
+        }
+        #[inline(always)]
+        fn deserialize_i128<'de, R: BincodeRead<'de>, O: Options>(
+            de: &mut ::Deserializer<R, O>,
+        ) -> Result<i128> {
+            Ok(de.deserialize_literal_u128()? as i128)
+        }
+    }
+}
+
 impl IntEncoding for VarintEncoding {
     #[inline(always)]
     fn u16_size(n: u16) -> u64 {
@@ -587,6 +744,18 @@ impl IntEncoding for VarintEncoding {
         ) -> Result<i128> {
             Self::deserialize_varint128(de).map(Self::zigzag128_decode)
         }
+    }
+}
+
+fn cast_u32_to_usize(n: u32) -> Result<usize> {
+    if n <= usize::max_value() as u32 {
+        Ok(n as usize)
+    } else {
+        Err(Box::new(ErrorKind::Custom(format!(
+            "Invalid size {}: sizes must fit in a usize (0 to {})",
+            n,
+            usize::max_value()
+        ))))
     }
 }
 
